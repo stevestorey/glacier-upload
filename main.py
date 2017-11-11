@@ -26,7 +26,6 @@ import tempfile
 import threading
 
 fileblock = threading.Lock()
-glacier = boto3.client('glacier')
 MAX_ATTEMPTS = 10
 
 def main():
@@ -52,6 +51,13 @@ def main():
     part_size = args['part_size'] * 1024 * 1024
 
     file_size = file_to_upload.seek(0, 2)
+
+    # Set the default boto3 session info
+    if args['region'] != '':
+        boto3.setup_default_session(profile_name=args['profile'], region_name=args['region'])
+    else:
+        boto3.setup_default_session(profile_name=args['profile'])
+    glacier = boto3.client('glacier')
 
     if file_size < 4096:
         print('File size is less than 4 MB. Uploading in one request...')
@@ -137,7 +143,7 @@ def main():
             max_workers=args['num_threads']) as executor:
         futures_list = {executor.submit(
             upload_part, job, vault_name, upload_id, part_size, file_to_upload,
-            file_size, num_parts): int(job / part_size) for job in job_list}
+            file_size, num_parts, glacier): int(job / part_size) for job in job_list}
         done, not_done = concurrent.futures.wait(
             futures_list, return_when=concurrent.futures.FIRST_EXCEPTION)
         if len(not_done) > 0:
@@ -184,7 +190,7 @@ def main():
 
 
 def upload_part(byte_pos, vault_name, upload_id, part_size, fileobj, file_size,
-                num_parts):
+                num_parts, glacier):
     fileblock.acquire()
     fileobj.seek(byte_pos)
     part = fileobj.read(part_size)
@@ -263,6 +269,10 @@ def parse_args():
     parser.add_argument('-p', '--part-size', type=int, default=8,
                         help='The part size for multipart upload, in '
                         'megabytes (e.g. 1, 2, 4, 8) default: 8')
+    parser.add_argument('--profile', default="default",
+                        help='Optional AWS profile name to use instead of \'default\'')
+    parser.add_argument('--region', default="",
+                        help='AWS Region to use')
     parser.add_argument('-t', '--num-threads', type=int, default=5,
                         help='The amount of concurrent threads (default: 5)')
     parser.add_argument('-u', '--upload-id',
