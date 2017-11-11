@@ -33,7 +33,10 @@ def main():
     args = parse_args()
 
     print('Reading file...')
-    if len(args['file_name']) == 1 and '.tar' in args['file_name'][0]:
+    if len(args['file_name']) == 1 and '.xz' in args['file_name'][0]:
+        file_to_upload = open(args['file_name'][0], mode='rb')
+        print('Opened pre-compressed file.')
+    elif len(args['file_name']) == 1 and '.tar' in args['file_name'][0]:
         file_to_upload = open(args['file_name'][0], mode='rb')
         print('Opened pre-tarred file.')
     else:
