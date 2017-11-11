@@ -80,6 +80,7 @@ def main():
             partSize=str(part_size)
             )
         upload_id = response['uploadId']
+        print('Upload ID: %s' % upload_id)
 
         for byte_pos in range(0, file_size, part_size):
             job_list.append(byte_pos)
